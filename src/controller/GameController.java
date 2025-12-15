@@ -1,24 +1,20 @@
 package controller;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.Alert;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import model.Tablero;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Collections;
-import javafx.scene.Node;
+
+import java.util.*;
 import javafx.animation.PauseTransition;
 import javafx.util.Duration;
 
-
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class GameController {
 
@@ -30,35 +26,47 @@ public class GameController {
     @FXML private Button btnIniciar;
     @FXML private Label lblTurno;
     @FXML private Pane capaBarcosJugador;
+    @FXML private GridPane gridJugador;
+    @FXML private GridPane gridEnemigo;
+    @FXML
+    private void iniciarJuego() {
+        estado = EstadoJuego.COLOCANDO_BARCOS;
+        btnIniciar.setDisable(true);
+        lblTurno.setText("Coloca tus barcos");
+
+        mostrarAlerta(
+                "Coloca todos tus barcos.\n" +
+                        "Cuando termines, comenzará la batalla."
+        );
+    }
 
 
-
+    private String nombreJugador = "Jugador";
 
     private Tablero tableroJugador = new Tablero();
     private Tablero tableroEnemigo = new Tablero();
 
-
-    // Cantidad máxima según reglas
     private final int MAX_4 = 1;
     private final int MAX_3 = 2;
     private final int MAX_2 = 3;
     private final int MAX_1 = 4;
-    // Contadores usados
+
     private int usados4 = 0;
     private int usados3 = 0;
     private int usados2 = 0;
     private int usados1 = 0;
+
     private boolean aviso4Mostrado = false;
     private boolean aviso3Mostrado = false;
     private boolean aviso2Mostrado = false;
     private boolean aviso1Mostrado = false;
+
     private int barcoSeleccionado = 0;
-    @FXML private GridPane gridJugador;
-    @FXML private GridPane gridEnemigo;
+
     private static final int TAMANO_CELDA = 45;
-    private static final int DIM = 10; // 10x10
+    private static final int DIM = 10;
+
     private enum EstadoJuego {
-        ESPERANDO_INICIO,
         COLOCANDO_BARCOS,
         TURNO_JUGADOR,
         TURNO_ENEMIGO,
@@ -68,7 +76,6 @@ public class GameController {
     private EstadoJuego estado = EstadoJuego.COLOCANDO_BARCOS;
     private List<int[]> disparosIA = new ArrayList<>();
 
-    // Imágenes
     private Image imgBarco4;
     private Image imgBarco3;
     private Image imgBarco2;
@@ -77,8 +84,12 @@ public class GameController {
     private Image imgAguaDisparo;
     private Image imgImpacto;
 
-
+    // =========================
+    // INITIALIZE
+    // =========================
     public void initialize() {
+
+        pedirNombreJugador();
 
         mostrarAlerta(
                 "Bienvenido a Batalla Naval\n\n" +
@@ -86,231 +97,119 @@ public class GameController {
                         "2. Luego ataca al enemigo por turnos\n" +
                         "3. El primero en hundir todos los barcos gana"
         );
-        imgBarco4 = new Image(getClass().getResource("/images/barco4.png").toExternalForm());
-        imgBarco3 = new Image(getClass().getResource("/images/barco3.png").toExternalForm());
-        imgBarco2 = new Image(getClass().getResource("/images/barco2.png").toExternalForm());
-        imgBarco1 = new Image(getClass().getResource("/images/barco1.png").toExternalForm());
-        imgAgua   = new Image(getClass().getResource("/images/agua.png").toExternalForm());
-        imgAguaDisparo = new Image(getClass().getResource("/images/agua_disparo.png").toExternalForm());
-        imgImpacto     = new Image(getClass().getResource("/images/impacto.png").toExternalForm());
-        for (int f = 0; f < DIM; f++) {
-            for (int c = 0; c < DIM; c++) {
-                disparosIA.add(new int[]{f, c});
-            }
-        }
-        Collections.shuffle(disparosIA);
 
-        btnBarco4.setOnAction(e -> {
-            if (usados4 < MAX_4) {
-                barcoSeleccionado = 4;
-                marcarBotonSeleccionado(btnBarco4);
-            }
-        });
+        cargarImagenes();
+        prepararDisparosIA();
+        configurarBotones();
 
-
-        btnBarco3.setOnAction(e -> {
-            if (usados3 < MAX_3) {
-                barcoSeleccionado = 3;
-                marcarBotonSeleccionado(btnBarco3);
-            }
-        });
-
-
-        btnBarco2.setOnAction(e -> {
-            if (usados2 < MAX_2) {
-                barcoSeleccionado = 2;
-                marcarBotonSeleccionado(btnBarco2);
-            }
-        });
-
-
-        btnBarco1.setOnAction(e -> {
-            if (usados1 < MAX_1) {
-                barcoSeleccionado = 1;
-                marcarBotonSeleccionado(btnBarco1);
-            }
-        });
-
-        toggleOrientacion.selectedProperty().addListener((obs, oldVal, newVal) ->
-                toggleOrientacion.setText(newVal ? "Horizontal" : "Vertical")
-        );
         lblTurno.setText("Coloca tus barcos");
 
         generarTableroJugador();
         generarTableroEnemigo();
         colocarBarcosEnemigo();
-
-
-
     }
 
+    // =========================
+    // NOMBRE DEL JUGADOR
+    // =========================
+    private void pedirNombreJugador() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Jugador");
+        dialog.setHeaderText("Ingrese su nombre");
+        dialog.setContentText("Nombre:");
 
-    @FXML
-    private void iniciarJuego() {
-        estado = EstadoJuego.COLOCANDO_BARCOS;
-        btnIniciar.setDisable(true);
+        dialog.showAndWait().ifPresent(nombre -> {
+            if (!nombre.trim().isEmpty()) {
+                nombreJugador = nombre;
+            }
+        });
+    }
 
-        mostrarAlerta(
-                "Coloca todos tus barcos.\n" +
-                        "Cuando termines, comenzará la batalla."
+    // =========================
+    // ARCHIVO PLANO
+    // =========================
+    private void guardarResultado(String resultado) {
+        try (FileWriter writer = new FileWriter("resultado_batalla_naval.txt")) {
+            writer.write("=== BATALLA NAVAL ===\n");
+            writer.write("Jugador: " + nombreJugador + "\n");
+            writer.write("Resultado: " + resultado + "\n");
+            writer.write("Barcos enemigos hundidos: " + tableroEnemigo.getBarcosHundidos() + "\n");
+            writer.write("Barcos del jugador hundidos: " + tableroJugador.getBarcosHundidos() + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // =========================
+    // IMÁGENES
+    // =========================
+    private void cargarImagenes() {
+        imgBarco4 = new Image(getClass().getResource("/images/barco4.png").toExternalForm());
+        imgBarco3 = new Image(getClass().getResource("/images/barco3.png").toExternalForm());
+        imgBarco2 = new Image(getClass().getResource("/images/barco2.png").toExternalForm());
+        imgBarco1 = new Image(getClass().getResource("/images/barco1.png").toExternalForm());
+        imgAgua = new Image(getClass().getResource("/images/agua.png").toExternalForm());
+        imgAguaDisparo = new Image(getClass().getResource("/images/agua_disparo.png").toExternalForm());
+        imgImpacto = new Image(getClass().getResource("/images/impacto.png").toExternalForm());
+    }
+
+    private void prepararDisparosIA() {
+        for (int f = 0; f < DIM; f++)
+            for (int c = 0; c < DIM; c++)
+                disparosIA.add(new int[]{f, c});
+        Collections.shuffle(disparosIA);
+    }
+
+    // =========================
+    // BOTONES
+    // =========================
+    private void configurarBotones() {
+        btnBarco4.setOnAction(e -> seleccionarBarco(4, usados4 < MAX_4, btnBarco4));
+        btnBarco3.setOnAction(e -> seleccionarBarco(3, usados3 < MAX_3, btnBarco3));
+        btnBarco2.setOnAction(e -> seleccionarBarco(2, usados2 < MAX_2, btnBarco2));
+        btnBarco1.setOnAction(e -> seleccionarBarco(1, usados1 < MAX_1, btnBarco1));
+
+        toggleOrientacion.selectedProperty().addListener(
+                (obs, oldVal, newVal) ->
+                        toggleOrientacion.setText(newVal ? "Horizontal" : "Vertical")
         );
     }
 
-    private void generarTableroJugador() {
-        for (int fila = 0; fila < DIM; fila++) {
-            for (int col = 0; col < DIM; col++) {
-                ImageView iv = crearCelda();
-                final int f = fila;
-                final int c = col;
-                iv.setOnMouseClicked(e -> colocarBarco(f, c));
-                gridJugador.add(iv, col, fila);
-            }
+    private void seleccionarBarco(int tamano, boolean disponible, Button boton) {
+        if (!disponible) {
+            mostrarAlerta("Ya no tienes barcos de ese tamaño.");
+            return;
         }
+        barcoSeleccionado = tamano;
+        limpiarSeleccionBotones();
+        boton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+    }
+
+
+
+    // =========================
+    // TABLEROS
+    // =========================
+    private void generarTableroJugador() {
+        for (int f = 0; f < DIM; f++)
+            for (int c = 0; c < DIM; c++) {
+                ImageView iv = crearCelda();
+                final int fila = f, col = c;
+                iv.setOnMouseClicked(e -> colocarBarco(fila, col));
+                gridJugador.add(iv, c, f);
+            }
     }
 
     private void generarTableroEnemigo() {
-        for (int fila = 0; fila < DIM; fila++) {
-            for (int col = 0; col < DIM; col++) {
+        for (int f = 0; f < DIM; f++)
+            for (int c = 0; c < DIM; c++) {
                 ImageView iv = crearCelda();
-
-                final int f = fila;
-                final int c = col;
-
-                iv.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> manejarDisparo(f, c, iv));
-
-                gridEnemigo.add(iv, col, fila);
+                final int fila = f, col = c;
+                iv.addEventHandler(MouseEvent.MOUSE_CLICKED,
+                        e -> manejarDisparo(fila, col, iv));
+                gridEnemigo.add(iv, c, f);
             }
-        }
     }
-
-
-    // ===========================
-    // COLOCAR BARCO
-    // ===========================
-
-    private void colocarBarco(int fila, int columna) {
-
-        if (estado != EstadoJuego.COLOCANDO_BARCOS) return;
-
-        if (barcoSeleccionado == 0) {
-            mostrarAlerta("Debes seleccionar un barco antes de colocarlo.");
-            return;
-        }
-
-        boolean horizontal = toggleOrientacion.isSelected();
-
-        boolean colocado = tableroJugador.colocarBarco(
-                fila,
-                columna,
-                barcoSeleccionado,
-                horizontal
-        );
-
-        if (!colocado) {
-            mostrarAlerta("No se puede colocar aquí.");
-            return;
-        }
-
-        // ===============================
-        // 👉 AQUI VAN LAS LINEAS QUE PREGUNTAS
-        // ===============================
-
-        Image imagenBarco;
-
-        switch (barcoSeleccionado) {
-            case 4 -> imagenBarco = imgBarco4;
-            case 3 -> imagenBarco = imgBarco3;
-            case 2 -> imagenBarco = imgBarco2;
-            case 1 -> imagenBarco = imgBarco1;
-            default -> {
-                return;
-            }
-        }
-
-        ImageView barco = new ImageView(imagenBarco);
-
-        double x = columna * TAMANO_CELDA + 10;
-        double y = fila * TAMANO_CELDA + 10;
-
-        barco.setLayoutX(x);
-        barco.setLayoutY(y);
-
-        if (horizontal) {
-            barco.setFitWidth(TAMANO_CELDA * barcoSeleccionado);
-            barco.setFitHeight(TAMANO_CELDA);
-        } else {
-            barco.setFitWidth(TAMANO_CELDA);
-            barco.setFitHeight(TAMANO_CELDA * barcoSeleccionado);
-        }
-
-        barco.setMouseTransparent(true);
-        capaBarcosJugador.getChildren().add(barco);
-
-
-        // ===============================
-        // CONTADORES
-        // ===============================
-        switch (barcoSeleccionado) {
-            case 4 -> usados4++;
-            case 3 -> usados3++;
-            case 2 -> usados2++;
-            case 1 -> usados1++;
-        }
-
-        controlarDisponibilidad();
-    }
-    private void controlarDisponibilidad() {
-
-        if (usados4 >= MAX_4 && !aviso4Mostrado) {
-            btnBarco4.setDisable(true);
-            mostrarAlerta("No tienes más barcos de tamaño 4.\nAhora coloca barcos de tamaño 3.");
-            aviso4Mostrado = true;
-            barcoSeleccionado = 0;
-        }
-
-        if (usados3 >= MAX_3 && !aviso3Mostrado) {
-            btnBarco3.setDisable(true);
-            mostrarAlerta("No tienes más barcos de tamaño 3.\nAhora coloca barcos de tamaño 2.");
-            aviso3Mostrado = true;
-            barcoSeleccionado = 0;
-        }
-
-        if (usados2 >= MAX_2 && !aviso2Mostrado) {
-            btnBarco2.setDisable(true);
-            mostrarAlerta("No tienes más barcos de tamaño 2.\nAhora coloca barcos de tamaño 1.");
-            aviso2Mostrado = true;
-            barcoSeleccionado = 0;
-        }
-
-        if (usados1 >= MAX_1 && !aviso1Mostrado) {
-            btnBarco1.setDisable(true);
-            mostrarAlerta(
-                    "Todos los barcos han sido ubicados.\n" +
-                            "¡Comienza la batalla!"
-            );
-
-            aviso1Mostrado = true;
-            barcoSeleccionado = 0;
-
-            estado = EstadoJuego.TURNO_JUGADOR;
-            lblTurno.setText("Tu turno");
-
-        }
-
-
-    }
-
-
-
-    // ===========================
-    // PINTAR TABLERO
-    // ===========================
-
-
-
-    // ===========================
-    // CELDAS / DISPAROS
-    // ===========================
 
     private ImageView crearCelda() {
         ImageView iv = new ImageView(imgAgua);
@@ -319,6 +218,83 @@ public class GameController {
         return iv;
     }
 
+    // =========================
+    // COLOCAR BARCOS
+    // =========================
+    private void colocarBarco(int fila, int col) {
+        if (estado != EstadoJuego.COLOCANDO_BARCOS || barcoSeleccionado == 0) return;
+
+        boolean horizontal = toggleOrientacion.isSelected();
+        if (!tableroJugador.colocarBarco(fila, col, barcoSeleccionado, horizontal)) {
+            mostrarAlerta("No se puede colocar aquí.");
+            return;
+        }
+
+        Image imagen = switch (barcoSeleccionado) {
+            case 4 -> imgBarco4;
+            case 3 -> imgBarco3;
+            case 2 -> imgBarco2;
+            default -> imgBarco1;
+        };
+
+        ImageView barco = new ImageView(imagen);
+        barco.setLayoutX(col * TAMANO_CELDA + 10);
+        barco.setLayoutY(fila * TAMANO_CELDA + 10);
+        barco.setFitWidth(horizontal ? TAMANO_CELDA * barcoSeleccionado : TAMANO_CELDA);
+        barco.setFitHeight(horizontal ? TAMANO_CELDA : TAMANO_CELDA * barcoSeleccionado);
+        barco.setMouseTransparent(true);
+        capaBarcosJugador.getChildren().add(barco);
+
+        switch (barcoSeleccionado) {
+            case 4 -> usados4++;
+            case 3 -> usados3++;
+            case 2 -> usados2++;
+            case 1 -> usados1++;
+        }
+
+        barcoSeleccionado = 0;
+        limpiarSeleccionBotones();
+
+        controlarDisponibilidad();
+    }
+
+    private void controlarDisponibilidad() {
+
+        if (usados4 >= MAX_4) {
+            btnBarco4.setDisable(true);
+        }
+
+        if (usados3 >= MAX_3) {
+            btnBarco3.setDisable(true);
+        }
+
+        if (usados2 >= MAX_2) {
+            btnBarco2.setDisable(true);
+        }
+
+        if (usados1 >= MAX_1) {
+            btnBarco1.setDisable(true);
+        }
+
+        if (usados4 == MAX_4 &&
+                usados3 == MAX_3 &&
+                usados2 == MAX_2 &&
+                usados1 == MAX_1) {
+
+            mostrarAlerta(
+                    "Todos los barcos han sido colocados.\n" +
+                            "¡Comienza la batalla!"
+            );
+
+            estado = EstadoJuego.TURNO_JUGADOR;
+            lblTurno.setText("Tu turno");
+        }
+    }
+
+
+    // =========================
+    // ENEMIGO
+    // =========================
     private void colocarBarcosEnemigo() {
         colocarAleatorio(4, 1);
         colocarAleatorio(3, 2);
@@ -328,120 +304,76 @@ public class GameController {
 
     private void colocarAleatorio(int tamano, int cantidad) {
         int colocados = 0;
-
         while (colocados < cantidad) {
-            int fila = (int)(Math.random() * 10);
-            int col = (int)(Math.random() * 10);
-            boolean horizontal = Math.random() < 0.5;
-
-            if (tableroEnemigo.colocarBarco(fila, col, tamano, horizontal)) {
+            int f = (int)(Math.random() * DIM);
+            int c = (int)(Math.random() * DIM);
+            boolean h = Math.random() < 0.5;
+            if (tableroEnemigo.colocarBarco(f, c, tamano, h))
                 colocados++;
-            }
         }
     }
 
-
     private void manejarDisparo(int fila, int col, ImageView celda) {
-
-        if (estado != EstadoJuego.TURNO_JUGADOR) return;
-
-        if (tableroEnemigo.yaDisparado(fila, col)) return;
+        if (estado != EstadoJuego.TURNO_JUGADOR || tableroEnemigo.yaDisparado(fila, col)) return;
 
         boolean impacto = tableroEnemigo.disparar(fila, col);
-
         celda.setImage(impacto ? imgImpacto : imgAguaDisparo);
-        gridEnemigo.setDisable(true);
-
 
         if (tableroEnemigo.todosHundidos()) {
-            estado = EstadoJuego.FIN_JUEGO;
-            lblTurno.setText("Ganaste 🎉");
-            mostrarAlerta("¡Ganaste! Hundiste todos los barcos enemigos 🚢🔥");
+            finalizarJuego(true);
             return;
         }
 
-        // 🔁 CAMBIO DE TURNO
         estado = EstadoJuego.TURNO_ENEMIGO;
-        lblTurno.setText("Turno del enemigo...");
-
-        // ⏱️ DELAY REAL
-        PauseTransition pausa = new PauseTransition(Duration.seconds(1.2));
-        pausa.setOnFinished(e -> turnoEnemigo());
-        pausa.play();
-    }
-
-
-
-
-
-    // ===========================
-    // ALERTA
-    // ===========================
-
-    private void mostrarAlerta(String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText(null);
-        alert.setTitle("Información");
-        alert.setContentText(mensaje);
-        alert.showAndWait();
+        PauseTransition p = new PauseTransition(Duration.seconds(1));
+        p.setOnFinished(e -> turnoEnemigo());
+        p.play();
     }
 
     private void turnoEnemigo() {
+        if (disparosIA.isEmpty()) return;
 
-        if (disparosIA.isEmpty()) {
-            estado = EstadoJuego.TURNO_JUGADOR;
-            return;
-        }
+        int[] d = disparosIA.remove(0);
+        boolean impacto = tableroJugador.disparar(d[0], d[1]);
 
-        int[] disparo = disparosIA.remove(0);
-        int fila = disparo[0];
-        int col  = disparo[1];
-
-        boolean impacto = tableroJugador.disparar(fila, col);
-
-        ImageView marcaDisparo = new ImageView(
-                impacto ? imgImpacto : imgAguaDisparo
-        );
-
-        marcaDisparo.setFitWidth(TAMANO_CELDA);
-        marcaDisparo.setFitHeight(TAMANO_CELDA);
-        marcaDisparo.setLayoutX(col * TAMANO_CELDA + 10);
-        marcaDisparo.setLayoutY(fila * TAMANO_CELDA + 10);
-        marcaDisparo.setMouseTransparent(true);
-
-        capaBarcosJugador.getChildren().add(marcaDisparo);
-
+        ImageView marca = new ImageView(impacto ? imgImpacto : imgAguaDisparo);
+        marca.setFitWidth(TAMANO_CELDA);
+        marca.setFitHeight(TAMANO_CELDA);
+        marca.setLayoutX(d[1] * TAMANO_CELDA + 10);
+        marca.setLayoutY(d[0] * TAMANO_CELDA + 10);
+        capaBarcosJugador.getChildren().add(marca);
 
         if (tableroJugador.todosHundidos()) {
-            estado = EstadoJuego.FIN_JUEGO;
-            lblTurno.setText("Perdiste 😢");
-            mostrarAlerta("Has perdido 😢\nTodos tus barcos fueron hundidos.");
+            finalizarJuego(false);
             return;
         }
 
         estado = EstadoJuego.TURNO_JUGADOR;
         lblTurno.setText("Tu turno");
-        gridEnemigo.setDisable(false);
-
     }
+
+    // =========================
+    // FIN DEL JUEGO
+    // =========================
+    private void finalizarJuego(boolean ganoJugador) {
+        estado = EstadoJuego.FIN_JUEGO;
+        guardarResultado(ganoJugador ? "GANÓ" : "PERDIÓ");
+        mostrarAlerta(ganoJugador
+                ? "¡Ganaste " + nombreJugador + "!"
+                : "Has perdido 😢");
+    }
+
+    private void mostrarAlerta(String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
+    }
+
     private void limpiarSeleccionBotones() {
         btnBarco4.setStyle("");
         btnBarco3.setStyle("");
         btnBarco2.setStyle("");
         btnBarco1.setStyle("");
     }
-
-    private void marcarBotonSeleccionado(Button boton) {
-        limpiarSeleccionBotones();
-        boton.setStyle(
-                "-fx-background-color: #4CAF50; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold;"
-        );
-    }
-
-
-
-
 }
-
