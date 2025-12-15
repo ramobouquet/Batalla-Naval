@@ -10,88 +10,85 @@
             fx:controller="controller.GameController"
             prefWidth="1100" prefHeight="650">
 
-    <!-- ZONA SUPERIOR: Información general -->
+    <!-- ========================= -->
+    <!-- ZONA SUPERIOR -->
+    <!-- ========================= -->
     <top>
         <VBox spacing="10">
-            <children>
 
-                <!-- PRIMERA FILA: BOTONES DE BARCOS -->
-                <HBox spacing="10" alignment="center_left">
-                    <padding>
-                        <Insets top="10" right="10" bottom="10" left="10"/>
-                    </padding>
-                    <children>
-                        <Label text="Selecciona el barco:" style="-fx-font-size: 16px;"/>
+            <!-- FILA DE CONTROLES -->
+            <HBox spacing="10" alignment="center_left">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
 
-                        <Button fx:id="btnBarco4" text="Barco 4" />
-                        <Button fx:id="btnBarco3" text="Barco 3" />
-                        <Button fx:id="btnBarco2" text="Barco 2" />
-                        <Button fx:id="btnBarco1" text="Barco 1" />
+                <children>
+                    <Button text="Iniciar juego"
+                            fx:id="btnIniciar"
+                            onAction="#iniciarJuego"/>
 
-                        <ToggleButton fx:id="toggleOrientacion"
-                                      text="Horizontal"
-                                      selected="true" />
-                    </children>
-                </HBox>
+                    <Label text="Selecciona barco:"
+                           style="-fx-font-size: 16px;"/>
 
-                <!-- SEGUNDA FILA: INFO DEL JUGADOR -->
-                <HBox spacing="20" alignment="center_left">
-                    <padding>
-                        <Insets top="10" right="10" bottom="10" left="10"/>
-                    </padding>
-                    <children>
-                        <Label fx:id="labelJugador"
-                               text="Jugador: ---"
-                               style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+                    <Button fx:id="btnBarco4" text="Barco 4"/>
+                    <Button fx:id="btnBarco3" text="Barco 3"/>
+                    <Button fx:id="btnBarco2" text="Barco 2"/>
+                    <Button fx:id="btnBarco1" text="Barco 1"/>
 
+                    <ToggleButton fx:id="toggleOrientacion"
+                                  text="Horizontal"
+                                  selected="true"/>
 
-
-                    </children>
-                </HBox>
-
-            </children>
+                    <Label fx:id="lblTurno"
+                           text="Coloca tus barcos"
+                           style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                </children>
+            </HBox>
         </VBox>
     </top>
 
-
-
-    <!-- ZONA CENTRAL: Tableros -->
+    <!-- ========================= -->
+    <!-- ZONA CENTRAL -->
+    <!-- ========================= -->
     <center>
-        <HBox spacing="50" alignment="center">
+        <HBox spacing="60" alignment="center">
             <padding>
-                <Insets top="20" right="20" bottom="20" left="20" />
+                <Insets top="20" right="20" bottom="20" left="20"/>
             </padding>
+
             <children>
 
-                <!-- TABLERO DEL JUGADOR -->
+                <!-- TABLERO JUGADOR -->
                 <VBox spacing="10" alignment="center">
                     <children>
-                        <Label text="Tu tablero"
-                               style="-fx-font-size: 16px; -fx-font-weight: bold;" />
 
-                        <GridPane fx:id="gridJugador"
-                                  hgap="2" vgap="2"
-                                  gridLinesVisible="false">
-                            <padding>
-                                <Insets top="10" bottom="10" left="10" right="10"/>
-                            </padding>
-                        </GridPane>
+                        <Label text="Tu tablero"
+                               style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                        <StackPane fx:id="contenedorJugador">
+
+                            <!-- CAPA CELDAS -->
+                            <GridPane fx:id="gridJugador"
+                                      hgap="0" vgap="0"
+                                      gridLinesVisible="false"/>
+
+                            <!-- CAPA BARCOS (IMÁGENES GRANDES) -->
+                            <Pane fx:id="capaBarcosJugador"
+                                  pickOnBounds="false"/>
+                        </StackPane>
                     </children>
                 </VBox>
 
-                <!-- TABLERO DEL ENEMIGO -->
+                <!-- TABLERO ENEMIGO -->
                 <VBox spacing="10" alignment="center">
                     <children>
+
                         <Label text="Tablero enemigo"
-                               style="-fx-font-size: 16px; -fx-font-weight: bold;" />
+                               style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
 
                         <GridPane fx:id="gridEnemigo"
-                                  hgap="2" vgap="2"
-                                  gridLinesVisible="false">
-                            <padding>
-                                <Insets top="10" bottom="10" left="10" right="10"/>
-                            </padding>
-                        </GridPane>
+                                  hgap="0" vgap="0"
+                                  gridLinesVisible="false"/>
                     </children>
                 </VBox>
 
@@ -99,12 +96,14 @@
         </HBox>
     </center>
 
-    <!-- ZONA INFERIOR: Mensajes -->
+    <!-- ========================= -->
+    <!-- ZONA INFERIOR -->
+    <!-- ========================= -->
     <bottom>
-        <Label fx:id="labelMensaje"
-               text="Bienvenido a Batalla Naval"
-               style="-fx-font-size: 16px; -fx-padding: 12px;"
+        <Label text="Batalla Naval"
+               style="-fx-font-size: 14px; -fx-padding: 10px;"
                BorderPane.alignment="center"/>
     </bottom>
 
 </BorderPane>
+
