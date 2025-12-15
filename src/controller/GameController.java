@@ -302,6 +302,8 @@ public class GameController {
         colocarAleatorio(1, 4);
     }
 
+    //Colocar Aleatorio
+
     private void colocarAleatorio(int tamano, int cantidad) {
         int colocados = 0;
         while (colocados < cantidad) {
